@@ -21,7 +21,7 @@ def interfaz():
     root.geometry(posicion)
     root.resizable(False, False)
 
-    root.title("Sistema de Archivos Distribuidos")
+    root.title("Tarea 1 RFVC")
 
     opciones = ['Imagen en Niveles de Gris', 
                 'Identificar pixel', 
@@ -36,16 +36,16 @@ def interfaz():
     i = 0
     e=1
 
-    def realizarAccion(opcion,imagen):
-        img = imread(imagen)
-        if opcion==1:
-            imgrey=cvtColor(img, COLOR_BGR2GRAY)
-            h = img.shape[0]
-            w = img.shape[1]
-            text="Altura : "+str(h)+" , Ancho: "+str(w)
+    def realizarAccion(opcion,imagen):       
+        img = imread(imagen)                #Se carga la imagen a memoria
+        if opcion==1:                       #Opcion 1 seleccionada en la interfaz gráfica
+            imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises
+            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
+            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
+            text="Altura : "+str(h)+" , Ancho: "+str(w)     #
             composite_img = putText(img, text, ( int(w/10) , int(h-(h/10)) ), FONT_HERSHEY_SIMPLEX,
-                1.0, (255, 255, 255), 2, LINE_AA, False)
-            imshow('Imagen en escala de grises',composite_img)
+                0.6, (255, 255, 255), 2, LINE_AA, False)    #Agregar características de la imagen como texto
+            imshow('Imagen en escala de grises',composite_img)  #Mostrar imagen en una ventana nueva
 
 
         if opcion==2:
@@ -56,22 +56,30 @@ def interfaz():
             plt.show()
 
         if opcion==3:
-            img = imread(imagen,0)
-            hist = calcHist([img], [0], None, [256], [0, 256])
-            fig = plt.figure()
-            plt.plot(hist, color='r')
+            fig,axes=plt.subplots(nrows=1, ncols=1)
+            def histcolor (imagen):
+                color = ('b','g','r')
+                for i,col in enumerate(color):
+                    histr = calcHist([imagen],[i],None,[256],[0,256])
+                    plt.plot(histr,color = col)
+                    plt.xlim([0,256])
+            histcolor(img)
+            imshow("Imagen Original",img)
             plt.show()
+            
 
         if opcion==4:
             umbral= int(umbralSel.get())
-            t2, imgbin2 = threshold(img, umbral, 256, THRESH_BINARY) 
-            imshow('Imagen binarizada 2',imgbin2)
+            t2, imgbin = threshold(img, umbral, 256, THRESH_BINARY) 
+            imshow('Imagen binarizada',imgbin)
 
         if opcion==5:
             umbral= int(umbralSel.get())
             imgrey=cvtColor(img, COLOR_BGR2GRAY)     #Se convierte a escala de grises
             t2, imgbin = threshold(imgrey, umbral, 255, THRESH_BINARY)  #Se binariza       
             arreglo= np.asarray(imgbin)
+            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
+            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
             n1=0
             n2=0
             n3=0
@@ -85,16 +93,18 @@ def interfaz():
                                 n2+=1
                             if arreglo[fil,col-1] == 0   and arreglo[fil+1,col-1] == 255   and arreglo[fil+1,col] == 0:
                                 n3+=1
-
+            text="Numero de objetos en la imagen = " + str(abs(n1-n2+n3))           #Texto sobre la información de la imagen
+            composite_img = putText(imgbin, text, ( int(w/10) , int(h-(h/10)) ), FONT_HERSHEY_SIMPLEX,
+                0.4, (255, 255, 255), 1, LINE_AA, False)                        #Agregar el número de objetos de la imagen como texto
             print("Numero de objetos en la imagen = ",abs(n1-n2+n3))
-            imshow('Imagen binarizada ',imgbin)
+            imshow('Imagen binarizada ',composite_img)
 
         if opcion==6:
             umbral=int(umbralSel.get())
             imgrey=cvtColor(img, COLOR_BGR2GRAY)     #Se convierte a escala de grises
             t2, imgbin = threshold(imgrey, umbral, 255, THRESH_BINARY)  #Se binariza 
-            imshow('Imagen binarizada ',imgbin)
-
+            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
+            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
             arreglo= np.asarray(imgbin)
 
             n1=0
@@ -111,15 +121,17 @@ def interfaz():
                                 n2+=1
                             if arreglo[fil,col-1] == 0   and arreglo[fil+1,col-1] == 255   and arreglo[fil+1,col] == 0:
                                 n3+=1
-
-            print("Numero de huecos en la imagen = ",1-(n1-n2+n3))
+            text="Numero de huecos en la imagen = " + str(abs(1-(n1-n2+n3)))           #Texto sobre la información de la imagen
+            composite_img = putText(imgbin, text, ( int(w/10) , int(h-(h/10)) ), FONT_HERSHEY_SIMPLEX,
+                0.25, (0, 0, 0), 1, LINE_AA, False)                        #Agregar el número de objetos de la imagen como texto                                
+            imshow('Imagen binarizada ',composite_img)
 
         if opcion==7:
             umbral=int(umbralSel.get())
             imgrey=cvtColor(img, COLOR_BGR2GRAY)     #Se convierte a escala de grises
             t2, imgbin = threshold(imgrey, umbral, 255, THRESH_BINARY)  #Se binariza 
-            imshow('Imagen binarizada ',imgbin)
-
+            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
+            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles  
             arreglo= np.asarray(imgbin)
 
             n1=0
@@ -136,8 +148,16 @@ def interfaz():
                                 n2+=1
                             if arreglo[fil,col-1] == 0   and arreglo[fil+1,col-1] == 255   and arreglo[fil+1,col] == 0:
                                 n3+=1
+            print(n1-n2+n3)
+            if 1-(n1-n2+n3)!=0:
+                text="La imagen es simplemente conectada"            #Texto sobre la información de la imagen
+            else:
+                text="La imagen es multiplemente conectada"        #Texto sobre la información de la imagen
+            composite_img = putText(imgbin, text, ( 0 , int(h-(h/10)) ), FONT_HERSHEY_SIMPLEX,
+                0.3, (255,255,255), 1, LINE_AA, False)                        #Agregar el número de objetos de la imagen como texto                                
+            imshow('Imagen binarizada ',composite_img)
 
-            print("Numero de huecos en la imagen = ",abs(1-(n1-n2+n3)))
+
 
         if opcion==8:
             umbral=int(umbralSel.get())
@@ -147,7 +167,6 @@ def interfaz():
             t2, imgbin = threshold(imgrey, umbral, 255, THRESH_BINARY)  #Se binariza 
             arreglo = np.asarray(img)
             arregloBin = np.asarray(imgbin)
-            edge_img = Canny(imagenO,200,200)
 
             n1=0
             n2=0
@@ -156,43 +175,20 @@ def interfaz():
             for fil,array in enumerate(arregloBin):
                 for col,a in enumerate(array):
                     if a==255:
-                        if col < len(array)-1 and col > 0 and fil < len(arregloBin)-1 and fil > 0:
-                            if arregloBin[fil,col+1]==0:
-                                arreglo[fil][col+1][0]=0
-                                arreglo[fil][col+1][1]=240
-                                arreglo[fil][col+1][2]=255
-                            if arregloBin[fil,col-1]==0:
-                                arreglo[fil][col-1][0]=0
-                                arreglo[fil][col-1][1]=240
-                                arreglo[fil][col-1][2]=255
-                            if arregloBin[fil+1,col]==0:
-                                arreglo[fil+1][col][0]=0
-                                arreglo[fil+1][col][1]=240
-                                arreglo[fil+1][col][2]=255
-                            if arregloBin[fil-1,col]==0:
-                                arreglo[fil-1][col][0]=0
-                                arreglo[fil-1][col][1]=240
-                                arreglo[fil-1][col][2]=255
-                            #8 Conectado 
-                            if arregloBin[fil+1,col+1]==0:
-                                arreglo[fil+1][col+1][0]=0
-                                arreglo[fil+1][col+1][1]=240
-                                arreglo[fil+1][col+1][2]=255
-                            if arregloBin[fil-1,col-1]==0:
-                                arreglo[fil-1][col-1][0]=0
-                                arreglo[fil-1][col-1][1]=240
-                                arreglo[fil-1][col-1][2]=255
-                            if arregloBin[fil+1,col-1]==0:
-                                arreglo[fil+1][col-1][0]=0
-                                arreglo[fil+1][col-1][1]=240
-                                arreglo[fil+1][col-1][2]=255
-                            if arregloBin[fil-1,col+1]==0:
-                                arreglo[fil-1][col+1][0]=0
-                                arreglo[fil-1][col+1][1]=240
-                                arreglo[fil-1][col+1][2]=255
-            imshow('Imagen con bordes',edge_img)
+                        if col < len(array)-1 and col > 0 and fil < len(arregloBin)-1 and fil > 0: #Evitar buscar fuera de los bordes
+                            #Buscar si en la 4-vecindad hay algún bit que forme parte del fondo de la imagen  
+                            if arregloBin[fil,col+1]==0 or arregloBin[fil,col-1]==0 or arregloBin[fil+1,col]==0 or arregloBin[fil-1,col]==0:    
+                                arreglo[fil][col][0]=0
+                                arreglo[fil][col][1]=240
+                                arreglo[fil][col][2]=255
+                            #Buscar si en la 8-vecindad hay algún bit que forme parte del fondo de la imagen  
+                            elif arregloBin[fil+1,col+1]==0 or arregloBin[fil+1,col-1]==0 or arregloBin[fil-1,col+1]==0 or arregloBin[fil-1,col-1]==0:   
+                                     
+                                arreglo[fil][col][0]=0
+                                arreglo[fil][col][1]=240
+                                arreglo[fil][col][2]=255
+
             imshow('Imagen Original ',imagenO)
-            imshow('Imagen Binarizada ',arregloBin)
             imshow('Imagen con Contorno ',arreglo)
 
         waitKey(0)  #comando para detener la imagen
