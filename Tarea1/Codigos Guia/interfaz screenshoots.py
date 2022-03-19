@@ -141,7 +141,7 @@ def interfaz():
             composite_img = putText(imgbin, text, ( int(w/10) , int(h-(h/10)) ), FONT_HERSHEY_SIMPLEX,
                 0.6, (255, 255, 255), 1, LINE_AA, False)                        #Agregar el número de objetos de la imagen como texto                                
             imshow('Imagen binarizada ',composite_img)                    #Mostrar imagen en una nueva ventana
-            waitKey(0)                                                  #Comando para detener la imagen
+            waitKey(0)                                                    #Comando para detener la imagen
             destroyAllWindows()
 
 
