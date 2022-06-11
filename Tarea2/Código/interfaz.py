@@ -1,9 +1,10 @@
+from copy import deepcopy
 import tkinter
 from tkinter.ttk import Button, Label, Radiobutton,Spinbox, Combobox
 from tkinter import Image, StringVar, Text,IntVar
 from tkinter.constants import GROOVE, W
 from tkinter import filedialog as fd
-from cv2 import equalizeHist, imread,cvtColor,imshow,waitKey,destroyAllWindows,putText,calcHist,threshold,COLOR_BGR2GRAY,FONT_HERSHEY_SIMPLEX,LINE_AA,THRESH_BINARY
+from cv2 import DIST_L2, MORPH_OPEN, NORM_MINMAX, dilate, distanceTransform, distanceTransformWithLabels, equalizeHist, erode, imread,cvtColor,imshow, morphologyEx, normalize,waitKey,destroyAllWindows,putText,calcHist,threshold,COLOR_BGR2GRAY,FONT_HERSHEY_SIMPLEX,LINE_AA,THRESH_BINARY
 import cv2
 from matplotlib import image
 from PIL import Image
@@ -83,9 +84,41 @@ def interfaz():
         if opcion==3:
             h = img.shape[0]                        #Obtener altura de la imagen en pixeles
             w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
-            titulo="Altura : " + str(h) + "       " + "Ancho: " + str(w) + "\n Tipo de Filtro:    "+ filtroSeleccionado.get()
+            titulo="Altura : " + str(h) + "       " + "Ancho: " + str(w) + "\n Tipo de Contraste:    "+ contrasteSeleccionado.get()
             plt.suptitle(titulo)
             imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises    
+
+            if contrasteSeleccionado.get()=="Lineal":
+                imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises    
+                arreglo= np.asarray(imgrey)
+                #Obtener nivel máximo y mínimo de nivel de gris
+                maximo=0
+                minimo=255
+                nuevoarreglo = deepcopy(arreglo)
+
+                for fil,array in enumerate(nuevoarreglo):
+                    for col,a in enumerate(array):
+                        if a > maximo:
+                            maximo = a
+
+                for fil,array in enumerate(nuevoarreglo):
+                    for col,a in enumerate(array):
+                        if a < minimo:
+                            minimo = a
+
+                for fil,array in enumerate(nuevoarreglo):
+                    for col,a in enumerate(array):
+                        nuevoarreglo[fil,col]=(a-minimo)*((255)/(maximo-minimo))
+                        
+                hist = calcHist(arreglo, [0] , None, [256], [0,256])
+                hist2 = calcHist(nuevoarreglo, [0] , None, [256], [0,256])
+                plt.subplot(121)
+                plt.plot(hist)
+                plt.subplot(122)
+                plt.plot(hist2)
+                imshow("Imagen Original",arreglo)
+                imshow("Imagen Nueva",nuevoarreglo)
+                plt.show()
 
             if contrasteSeleccionado.get()=="Equalizado":
                 hist = calcHist(imgrey, [0] , None, [256], [0,256])
@@ -98,45 +131,42 @@ def interfaz():
                 imshow("Original", imgrey)
                 imshow("Eq", imeq)
                 plt.show()
-            if contrasteSeleccionado.get()=="Lineal":
-                imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises    
-                arreglo= np.asarray(imgrey)
-                #Obtener nivel máximo y mínimo de nivel de gris
-                maximo=0
-                minimo=255
-                nuevoarreglo=arreglo
 
-                for fil,array in enumerate(arreglo):
-                    for col,a in enumerate(array):
-                        if a > maximo:
-                            maximo = a
-                            print(a, fil,col)
+        if opcion==4:
 
-                for fil,array in enumerate(arreglo):
-                    for col,a in enumerate(array):
-                        if a < minimo:
-                            minimo = a
-                print( maximo, minimo)
+            imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises 
+            t2, imgbin = threshold(imgrey, 128, 256, THRESH_BINARY)     #Convertir imagen a binaria 
+            kernel = np.ones((7,7), np.uint8)
+            dist = distanceTransform(imgbin, DIST_L2 , 3)
+            normalize(dist, dist, 0, 1.0, NORM_MINMAX)
+            t2, imgbin2 = threshold(dist, float(umbralSel.get())/256, 1, THRESH_BINARY)     #Convertir imagen a binaria
+            imshow("Transformada Distancia", dist)
+            imshow("Imagen Original", imgbin)
+            imshow("Imagen A analizar", imgbin2)
 
-                for fil,array in enumerate(nuevoarreglo):
-                    for col,a in enumerate(array):
-                        if a==maximo:
-                            print((a-minimo)*((255)/(maximo-minimo)))
-                        nuevoarreglo[fil,col]=(a-minimo)*((255)/(maximo-minimo))
-                        if a==maximo:
-                            print(nuevoarreglo[fil,col])
+            arreglo= np.asarray(imgbin2)             #Convertir la información de la imagen en un arreglo numpy
+            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
+            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
+            n1=0
+            n2=0
+            n3=0
+            #Se recorre la imagen para buscar las máscaras
+            #    |1 0|       |1 1|       |1 0|
+            #    |0 0|       |1 0|       |0 1|
+            for fil,array in enumerate(arreglo):
+                for col,a in enumerate(array):
+                    if a!= 0.0:
+                        if col < len(array)-1 and fil < len(arreglo)-1 and col>1 and fil>1: #Evitar buscar máscaras en los bordes
+                            if arreglo[fil,col+1] == 0.0   and arreglo[fil+1,col] == 0.0   and arreglo[fil+1,col+1] == 0.0:
+                                n1+=1                       #Contar mascara 1
+                            if arreglo[fil,col+1] != 0.0 and arreglo[fil+1,col] != 0.0 and arreglo[fil+1,col+1] == 0.0:
+                                n2+=1                       #Contar mascara 2
+                            if arreglo[fil,col+1] == 0.0   and arreglo[fil+1,col] == 0.0   and arreglo[fil+1,col+1] != 0.0:
+                                n3+=1                       #Contar mascara 3
 
-                hist2 = calcHist(nuevoarreglo, [0] , None, [256], [0,256])
-                plt.subplot(121)
-                plt.plot(hist2)
-                plt.subplot(122)
-                #plt.plot(hist2)
-                #imshow("Original", arreglo)
-                plt.imshow(nuevoarreglo, cmap="gray")
-                plt.show()
-
-
-
+            print(n1,n2,n3)
+            print(n1-n2+n3)
+            text="Numero de objetos en la imagen = " + str(abs(n1-n2+n3))           #Texto sobre la información de la imagen
             
 
 
@@ -356,7 +386,6 @@ def interfaz():
     cbbContraste=Combobox(root,textvariable=contrasteSeleccionado)
     cbbContraste['values']=tipoContraste
 
-
     def mostrarOpciones():
         umbralSel.grid_forget()
         umbraltxt.grid_forget()
@@ -389,8 +418,8 @@ def interfaz():
         if opcion.get()==3:
             lblContraste.grid(row=2, column=2, padx=15, pady=5)
             cbbContraste.grid(row=2, column=3, padx=15, pady=5)
-        
-        if opcion.get()==4 or opcion.get()==5 or opcion.get()==6 or opcion.get()==7 or opcion.get()==8:
+
+        if  opcion.get()==4 or opcion.get()==6 or opcion.get()==7 or opcion.get()==8:
             umbraltxt.grid(row=2, column=2, padx=15, pady=5)
             umbralSel.grid(row=2, column=3, padx=15, pady=5)
 

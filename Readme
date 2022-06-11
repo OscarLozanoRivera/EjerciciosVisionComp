@@ -2,3 +2,5 @@ Bibliotecas de Python necesarias para utilizar la interfaz gráfica:
 Tkinter
 OpenCV
 Mathplotlib
+Numpy
+skimage (scikit-image)
