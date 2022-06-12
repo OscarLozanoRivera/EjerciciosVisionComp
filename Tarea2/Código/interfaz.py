@@ -11,6 +11,7 @@ from PIL import Image
 import numpy as np 
 import matplotlib.pyplot as plt 
 import skimage
+import scipy
 
 def interfaz():
     root = tkinter.Tk()         #Se inicia la ventana
@@ -63,7 +64,6 @@ def interfaz():
             plt.imshow(skimage.color.rgb2gray(cruido), cmap='gray')   #Dibujar en una ventana mediante la biblioteca matplotlib
             plt.show() 
              
-
         if opcion==2:
             h = img.shape[0]                        #Obtener altura de la imagen en pixeles
             w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
@@ -80,7 +80,6 @@ def interfaz():
             imshow("Imagen sin filtro",img)   
             imshow("Imagen con filtro",imFiltro)   
             
-        
         if opcion==3:
             h = img.shape[0]                        #Obtener altura de la imagen en pixeles
             w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
@@ -133,7 +132,6 @@ def interfaz():
                 plt.show()
 
         if opcion==4:
-
             imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises 
             t2, imgbin = threshold(imgrey, 128, 256, THRESH_BINARY)     #Convertir imagen a binaria 
             kernel = np.ones((7,7), np.uint8)
@@ -143,39 +141,72 @@ def interfaz():
             imshow("Transformada Distancia", dist)
             imshow("Imagen Original", imgbin)
             imshow("Imagen A analizar", imgbin2)
+            contarObjetos(imgbin2)
 
-            arreglo= np.asarray(imgbin2)             #Convertir la información de la imagen en un arreglo numpy
-            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
-            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
-            n1=0
-            n2=0
-            n3=0
-            #Se recorre la imagen para buscar las máscaras
-            #    |1 0|       |1 1|       |1 0|
-            #    |0 0|       |1 0|       |0 1|
-            for fil,array in enumerate(arreglo):
-                for col,a in enumerate(array):
-                    if a!= 0.0:
-                        if col < len(array)-1 and fil < len(arreglo)-1 and col>1 and fil>1: #Evitar buscar máscaras en los bordes
-                            if arreglo[fil,col+1] == 0.0   and arreglo[fil+1,col] == 0.0   and arreglo[fil+1,col+1] == 0.0:
-                                n1+=1                       #Contar mascara 1
-                            if arreglo[fil,col+1] != 0.0 and arreglo[fil+1,col] != 0.0 and arreglo[fil+1,col+1] == 0.0:
-                                n2+=1                       #Contar mascara 2
-                            if arreglo[fil,col+1] == 0.0   and arreglo[fil+1,col] == 0.0   and arreglo[fil+1,col+1] != 0.0:
-                                n3+=1                       #Contar mascara 3
+        if opcion==5:
+            imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises 
+            tamKer = int(kerSel.get())
+            kernel = np.ones((tamKer,tamKer), np.uint8)
+            if opSeleccionado.get()=="Filtrados":
+                iteraciones = int(iterSel.get())
+                erosion = erode(imgrey,kernel,iterations=iteraciones)
+                dilatacion = dilate(erosion,kernel,iterations=iteraciones)
+                dilatacion = dilate(dilatacion,kernel,iterations=iteraciones)
+                erosion = erode(dilatacion,kernel,iterations=iteraciones)
+                imshow("Original",img)
+                imshow("Filtrada",erosion)
+            if opSeleccionado.get()=="Detección de contornos":
+                umbral = int(umbralSel.get())
+                t2, imgbin = threshold(imgrey, umbral, 256, THRESH_BINARY)     #Convertir imagen a binaria 
+                erosion = erode(imgbin,kernel,iterations=1)
+                resta = cv2.subtract(imgbin,erosion)
+                imshow("Original",imgbin)
+                imshow("Restada",resta)
+            if opSeleccionado.get()=="Conteo de objetos":
+                umbral = int(umbralSel.get())
+                t2, imgbin = threshold(imgrey, umbral, 256, THRESH_BINARY)     #Convertir imagen a binaria 
+                numIteraciones = int(iterSel.get())
+                erosion = erode(imgbin,kernel,iterations=numIteraciones)
+                dilatacion = dilate(erosion,kernel,iterations=numIteraciones)
+                contarObjetos(dilatacion)
+                imshow("Erosion", erosion)
+                imshow("Dilatacion", dilatacion)
 
-            print(n1,n2,n3)
-            print(n1-n2+n3)
-            text="Numero de objetos en la imagen = " + str(abs(n1-n2+n3))           #Texto sobre la información de la imagen
+        if opcion==6:
+            imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises  
+            hist = calcHist(imgrey, [0] , None, [256], [0,256])
+            suma=0
+            for a in hist:
+                for e in a:
+                    print(e,type(e))
+            plt.subplot(121)
+            plt.show()
             
-
-
-
-
 
 
         waitKey(0)  #comando para detener la imagen
         destroyAllWindows()
+
+    def contarObjetos(imagen):
+        arreglo= np.asarray(imagen)             #Convertir la información de la imagen en un arreglo numpy
+        n1=0
+        n2=0
+        n3=0
+        #Se recorre la imagen para buscar las máscaras
+        #    |1 0|       |1 1|       |1 0|
+        #    |0 0|       |1 0|       |0 1|
+        for fil,array in enumerate(arreglo):
+            for col,a in enumerate(array):
+                if a!= 0.0:
+                    if col < len(array)-1 and fil < len(arreglo)-1 and col>1 and fil>1: #Evitar buscar máscaras en los bordes
+                        if arreglo[fil,col+1] == 0.0   and arreglo[fil+1,col] == 0.0   and arreglo[fil+1,col+1] == 0.0:
+                            n1+=1                       #Contar mascara 1
+                        if arreglo[fil,col+1] != 0.0 and arreglo[fil+1,col] != 0.0 and arreglo[fil+1,col+1] == 0.0:
+                            n2+=1                       #Contar mascara 2
+                        if arreglo[fil,col+1] == 0.0   and arreglo[fil+1,col] == 0.0   and arreglo[fil+1,col+1] != 0.0:
+                            n3+=1                       #Contar mascara 3
+        print(abs(n1-n2+n3))
+        text="Numero de objetos en la imagen = " + str(abs(n1-n2+n3))           #Texto sobre la información de la imagen
 
     """
     #Función para realizar la opción elegida por el usuario
@@ -386,6 +417,39 @@ def interfaz():
     cbbContraste=Combobox(root,textvariable=contrasteSeleccionado)
     cbbContraste['values']=tipoContraste
 
+    def mostrarCombobox(event):
+        umbralSel.grid_forget()
+        umbraltxt.grid_forget()
+        iterSel.grid_forget()
+        itertxt.grid_forget()
+        kerSel.grid_forget()
+        kertxt.grid_forget()
+        if opSeleccionado.get()=="Filtrados" or opSeleccionado.get()=="Conteo de objetos":
+            umbralSel.grid(row=3, column=3, padx=15, pady=5)
+            umbraltxt.grid(row=3, column=2, padx=15, pady=5)
+            iterSel.grid(row=4, column=3, padx=15, pady=5)
+            itertxt.grid(row=4, column=2, padx=15, pady=5)
+            kerSel.grid(row=5, column=3, padx=15, pady=5)
+            kertxt.grid(row=5, column=2, padx=15, pady=5)
+        if opSeleccionado.get()=="Detección de contornos":
+            umbralSel.grid(row=3, column=3, padx=15, pady=5)
+            umbraltxt.grid(row=3, column=2, padx=15, pady=5)
+            kerSel.grid(row=4, column=3, padx=15, pady=5)
+            kertxt.grid(row=4, column=2, padx=15, pady=5)
+
+    opMorf=["Filtrados","Detección de contornos","Conteo de objetos"]
+    opSeleccionado= StringVar()
+    lblOpM=Label(root,text="Tipo Filtro")
+    cbbOpM=Combobox(root,textvariable=opSeleccionado)
+    cbbOpM['values']=opMorf
+    cbbOpM.bind("<<ComboboxSelected>>",mostrarCombobox)
+
+    iterSel=Spinbox(root,width=3,from_=0,to=100,increment=1)
+    itertxt=Label(root,text="Iteraciones")
+    
+    kerSel=Spinbox(root,width=3,from_=0,to=100,increment=1)
+    kertxt=Label(root,text="Tamaño Kernel")
+
     def mostrarOpciones():
         umbralSel.grid_forget()
         umbraltxt.grid_forget()
@@ -403,6 +467,14 @@ def interfaz():
         lblContraste.grid_forget()
         cbbContraste.grid_forget()
 
+        lblOpM.grid_forget()
+        cbbOpM.grid_forget()
+
+        iterSel.grid_forget()
+        itertxt.grid_forget()
+        kerSel.grid_forget()
+        kertxt.grid_forget()
+
         if opcion.get()==1:
             lblRuido.grid(row=2, column=2, padx=15, pady=5)
             cbbRuido.grid(row=2, column=3, padx=15, pady=5)
@@ -419,9 +491,15 @@ def interfaz():
             lblContraste.grid(row=2, column=2, padx=15, pady=5)
             cbbContraste.grid(row=2, column=3, padx=15, pady=5)
 
-        if  opcion.get()==4 or opcion.get()==6 or opcion.get()==7 or opcion.get()==8:
+        if  opcion.get()==4:
             umbraltxt.grid(row=2, column=2, padx=15, pady=5)
             umbralSel.grid(row=2, column=3, padx=15, pady=5)
+        
+        if  opcion.get()==5:
+            lblOpM.grid(row=2, column=2, padx=15, pady=5)
+            cbbOpM.grid(row=2, column=3, padx=15, pady=5)
+
+            
 
     for i, op in enumerate(opciones):
         Radiobutton(root, text=op, variable=opcion, value=i+1, command=mostrarOpciones).grid(row=i+e, sticky=W, padx=15, pady=5)         
