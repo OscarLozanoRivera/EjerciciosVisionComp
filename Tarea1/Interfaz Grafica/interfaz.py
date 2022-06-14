@@ -229,7 +229,7 @@ def interfaz():
             umbraltxt.grid(row=2, column=2, padx=15, pady=5)
             umbralSel.grid(row=2, column=3, padx=15, pady=5)
 
-    for i, op in enumerate(opciones):|
+    for i, op in enumerate(opciones):
         Radiobutton(root, text=op, variable=opcion, value=i+1, command=mostrarOpciones).grid(row=i+e, sticky=W, padx=15, pady=5)         
 
     labelDatos=Label(root)

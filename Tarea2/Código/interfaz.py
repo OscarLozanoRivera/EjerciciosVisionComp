@@ -1,17 +1,18 @@
 from copy import deepcopy
 import tkinter
 from tkinter.ttk import Button, Label, Radiobutton,Spinbox, Combobox
-from tkinter import Image, StringVar, Text,IntVar
+from tkinter import StringVar, Text,IntVar
 from tkinter.constants import GROOVE, W
 from tkinter import filedialog as fd
-from cv2 import DIST_L2, MORPH_OPEN, NORM_MINMAX, dilate, distanceTransform, distanceTransformWithLabels, equalizeHist, erode, imread,cvtColor,imshow, morphologyEx, normalize,waitKey,destroyAllWindows,putText,calcHist,threshold,COLOR_BGR2GRAY,FONT_HERSHEY_SIMPLEX,LINE_AA,THRESH_BINARY
+from cv2 import DIST_L2, IMREAD_GRAYSCALE, MORPH_OPEN, NORM_MINMAX, dilate, distanceTransform, distanceTransformWithLabels, equalizeHist, erode, imread,cvtColor,imshow, log, morphologyEx, normalize,waitKey,destroyAllWindows,putText,calcHist,threshold,COLOR_BGR2GRAY,FONT_HERSHEY_SIMPLEX,LINE_AA,THRESH_BINARY
 import cv2
-from matplotlib import image
-from PIL import Image
 import numpy as np 
 import matplotlib.pyplot as plt 
 import skimage
-import scipy
+import math
+import sympy
+from sympy.abc import x
+
 
 def interfaz():
     root = tkinter.Tk()         #Se inicia la ventana
@@ -33,7 +34,7 @@ def interfaz():
                 'Determinar número de objetos', 
                 'Aplicar operaciones morfológicas', 
                 'Método de umbralado de Kapur', 
-                'Método de umbralado de Kapur']
+                'Histograma en escala de grises']
     opcion = IntVar()                   #Variable para guardar la opción que escoge el usuario
     opcion.set(None)
     i = 0
@@ -107,10 +108,10 @@ def interfaz():
 
                 for fil,array in enumerate(nuevoarreglo):
                     for col,a in enumerate(array):
-                        nuevoarreglo[fil,col]=(a-minimo)*((255)/(maximo-minimo))
+                        nuevoarreglo[fil,col]=int(a-minimo)*((255)/(maximo-minimo))
                         
-                hist = calcHist(arreglo, [0] , None, [256], [0,256])
-                hist2 = calcHist(nuevoarreglo, [0] , None, [256], [0,256])
+                hist = calcHist([arreglo], [0] , None, [256], [0,256])
+                hist2 = calcHist([nuevoarreglo], [0] , None, [256], [0,256])
                 plt.subplot(121)
                 plt.plot(hist)
                 plt.subplot(122)
@@ -120,9 +121,9 @@ def interfaz():
                 plt.show()
 
             if contrasteSeleccionado.get()=="Equalizado":
-                hist = calcHist(imgrey, [0] , None, [256], [0,256])
+                hist = calcHist([imgrey], [0] , None, [256], [0,256])
                 imeq = equalizeHist(imgrey)
-                histEq = calcHist(imeq, [0] , None, [256], [0,256])
+                histEq = calcHist([imeq], [0] , None, [256], [0,256])
                 plt.subplot(121)
                 plt.plot(hist)
                 plt.subplot(122)
@@ -172,17 +173,60 @@ def interfaz():
                 imshow("Erosion", erosion)
                 imshow("Dilatacion", dilatacion)
 
-        if opcion==6:
-            imgrey=cvtColor(img, COLOR_BGR2GRAY)    #Convertir imagen de formato RGB a Escala de Grises  
-            hist = calcHist(imgrey, [0] , None, [256], [0,256])
-            suma=0
-            for a in hist:
-                for e in a:
-                    print(e,type(e))
-            plt.subplot(121)
+        if opcion==7:   
+            imgrey=imread(imagen, IMREAD_GRAYSCALE)       
+            plt.hist(imgrey.ravel(),256,[0,256])
             plt.show()
-            
 
+        if opcion==6:
+            img = imread(imagen,0)
+            imgrey=imread(imagen, IMREAD_GRAYSCALE)    #Convertir imagen de formato RGB a Escala de Grises    
+            hist = calcHist([img], [0] , None, [256], [0,256])
+            
+            h = img.shape[0]                        #Obtener altura de la imagen en pixeles
+            w = img.shape[1]                        #Obtener ancho de la imagen en pixeles
+            Nt=h*w                                  #Número total de pixelse
+            Ht=[]
+            for Pr in hist: 
+                    Ht.append(float(Pr)/Nt)                    #Histograma normalizado por nivel de gris
+            hc1= []
+            hc2= []
+            hc1.append(Ht[0])
+            hc2.append(1-Ht[0])
+            for i,a in enumerate(Ht[1:]):
+                    hc1.append(hc1[i-1]+Ht[i])
+                    hc2.append(1-hc1[i])
+            umbral=0
+            entropiaTotal = 0
+            maxEntropia = 0
+            for i,P in enumerate(hist):
+                entropiaFondo = 0
+                entropiaObjeto = 0
+                for u in range(i):
+                    if float(hist[u])!=0 and hc1[i]!=0:
+                        A=log(Ht[u]/hc1[i])
+                        entropiaFondo -= ((Ht[u]/hc1[i]) * A[0])
+                for u in range(i+1,256):
+                    if float(hist[u])!=0 and hc2[i]!=0:
+                        #print("a",Ht[u]/hc2[i])
+                        B=log(Ht[u]/hc2[i])
+                        entropiaObjeto -= ((Ht[u]/hc2[i]) * B[0])
+
+                entropiaTotal = entropiaFondo + entropiaObjeto
+                if maxEntropia < entropiaTotal:
+                    maxEntropia = entropiaTotal
+                    umbral = i
+            print()
+            print(umbral)
+            t2, imgbin = threshold(imgrey, umbral, 256, THRESH_BINARY)     #Convertir imagen a binaria 
+            imshow("Kapur",imgbin)
+            titulo="Umbral seleccionado por método Kapur: " + str(umbral) 
+            fig, ax = plt.subplots()
+            maximo = int(max(hist))
+            ax.plot([x*umbral for x in np.ones(maximo)],np.arange(maximo))
+            plt.title(titulo)
+            plt.hist(imgrey.ravel(),256,[0,256])
+            plt.show()
 
         waitKey(0)  #comando para detener la imagen
         destroyAllWindows()
@@ -237,6 +281,7 @@ def interfaz():
                 plt.xlim([0,256])               #Definir el límite en el eje x del plano
             imshow("Imagen Original",img)           #Mostra la imagen en una nueva ventana
             plt.show()                              #Mostrar el histograma en una ventana con matplotlib
+            
             
 
         if opcion==4:           #Opcion 4 seleccionada en la interfaz gráfica
